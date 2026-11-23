@@ -1,0 +1,82 @@
+[
+  {
+    "question_id": 186,
+    "db_id": "financial",
+    "difficulty": "moderate",
+    "question": "What percentage of male clients request for weekly statements to be issued?",
+    "evidence": "Percentage of male clients = [count(male clients who requested weekly statements / count(clients who requested weekly statements)] * 100%; Male means gender = 'M'; 'POPLATEK TYDNE' stands for weekly issuance",
+    "gold_sql": "SELECT CAST(SUM(T1.gender = 'M') AS REAL) * 100 / COUNT(T1.client_id) FROM client AS T1 INNER JOIN account AS T2 ON T2.district_id = T1.district_id INNER JOIN disp as T3 on T1.client_id = T3.client_id AND T2.account_id = T3.account_id WHERE T2.frequency = 'POPLATEK TYDNE'"
+  },
+  {
+    "question_id": 645,
+    "db_id": "codebase_community",
+    "difficulty": "simple",
+    "question": "How many negative comments were given by user ID 13?",
+    "evidence": "negative comments refer to Score < 60;",
+    "gold_sql": "SELECT COUNT(Id) FROM comments WHERE UserId = 13 AND Score < 60"
+  },
+  {
+    "question_id": 723,
+    "db_id": "superhero",
+    "difficulty": "moderate",
+    "question": "Among the superheroes with blue eyes, how many of them have the super power of \"Agility\"?",
+    "evidence": "blue eyes refers to the eye colour = 'Blue' in the colour table; super power of \"Agility\" refers to power_name = 'Agility'",
+    "gold_sql": "SELECT COUNT(T1.id) FROM superhero AS T1 INNER JOIN hero_power AS T2 ON T1.id = T2.hero_id INNER JOIN superpower AS T3 ON T2.power_id = T3.id INNER JOIN colour AS T4 ON T1.eye_colour_id = T4.id WHERE T3.power_name = 'Agility' AND T4.colour = 'Blue'"
+  },
+  {
+    "question_id": 827,
+    "db_id": "superhero",
+    "difficulty": "moderate",
+    "question": "What is the average height of a non-human superhero in Dark Horse Comics?",
+    "evidence": "average = AVG(height_cm); non-human superhero refers to race <> 'Human'; Dark Horse Comics refers to publisher_name = 'Dark Horse Comics';",
+    "gold_sql": "SELECT AVG(T1.height_cm) FROM superhero AS T1 INNER JOIN publisher AS T2 ON T1.publisher_id = T2.id INNER JOIN race AS T3 ON T1.race_id = T3.id WHERE T2.publisher_name = 'Dark Horse Comics' AND T3.race != 'Human'"
+  },
+  {
+    "question_id": 881,
+    "db_id": "formula_1",
+    "difficulty": "moderate",
+    "question": "For the drivers who took part in the race in 1983/7/16, what's their race completion rate?",
+    "evidence": "DIVIDE(COUNT(driverid when time has value ), (COUNT(driverid )) as percentage; in 1983/7/16 refers to when date = '1983-07-16'",
+    "gold_sql": "SELECT CAST(COUNT(CASE WHEN T2.time IS NOT NULL THEN T2.driverId END) AS REAL) * 100 / COUNT(T2.driverId) FROM races AS T1 INNER JOIN results AS T2 ON T2.raceId = T1.raceId WHERE T1.date = '1983-07-16'"
+  },
+  {
+    "question_id": 928,
+    "db_id": "formula_1",
+    "difficulty": "moderate",
+    "question": "Which driver ranked the first in the Canadian Grand Prix in 2007? Please give his reference name.",
+    "evidence": "reference name refers to driverRef; Canadian Grand Prix refers to races.name = 'Canadian Grand Prix';",
+    "gold_sql": "SELECT T3.driverRef FROM races AS T1 INNER JOIN results AS T2 ON T2.raceId = T1.raceId INNER JOIN drivers AS T3 ON T3.driverId = T2.driverId WHERE T1.name = 'Canadian Grand Prix' AND T2.position = 1 AND T1.year = 2007"
+  },
+  {
+    "question_id": 957,
+    "db_id": "formula_1",
+    "difficulty": "simple",
+    "question": "How many Italian drivers haven't finished the race?",
+    "evidence": "haven't finished the race refers to time is null;",
+    "gold_sql": "SELECT COUNT(DISTINCT T1.driverId) FROM results AS T1 INNER JOIN drivers AS T2 on T1.driverId = T2.driverId WHERE T2.nationality = 'Italian' AND T1.time IS NULL"
+  },
+  {
+    "question_id": 1060,
+    "db_id": "european_football_2",
+    "difficulty": "simple",
+    "question": "How many players were born after 1990?",
+    "evidence": "born after 1990 refers to strftime('%Y', birthday) = '1990';",
+    "gold_sql": "SELECT COUNT(id) FROM Player WHERE STRFTIME('%Y', birthday) > '1990'"
+  },
+  {
+    "question_id": 1075,
+    "db_id": "european_football_2",
+    "difficulty": "moderate",
+    "question": "List all the football player with the highest balance score and potential score of 61.",
+    "evidence": "balance score refers to balance; highest balance score refers to MAX(balance); potential score refers to potential; potential = 61;",
+    "gold_sql": "SELECT t1.player_name FROM Player AS t1 INNER JOIN Player_Attributes AS t2 ON t1.player_api_id = t2.player_api_id WHERE t2.potential = '61' ORDER BY t2.balance DESC LIMIT 1"
+  },
+  {
+    "question_id": 1108,
+    "db_id": "european_football_2",
+    "difficulty": "moderate",
+    "question": "What was the build up play speed class for \"Willem II\" on 2011/2/22?",
+    "evidence": "\"Willem II\" refers to team_long_name = 'Willem II'; on 2011/2/22 refers to date = '2012-02-22'",
+    "gold_sql": "SELECT t2.buildUpPlaySpeedClass FROM Team AS t1 INNER JOIN Team_Attributes AS t2 ON t1.team_api_id = t2.team_api_id WHERE t1.team_long_name = 'Willem II' AND SUBSTR(t2.`date`, 1, 10) = '2011-02-22'"
+  }
+]

@@ -1,0 +1,9 @@
+item_id,question_id,db_id,difficulty,arm,ex,exec_status
+cf5386,1060,european_football_2,simple,with_evidence,0,ok
+9b4bce,186,financial,moderate,without_evidence,0,ok
+f40484,1060,european_football_2,simple,without_evidence,1,ok
+b7523f,645,codebase_community,simple,with_evidence,1,ok
+6fd7b9,186,financial,moderate,with_evidence,0,ok
+474ee2,645,codebase_community,simple,without_evidence,0,ok
+904d0c,1108,european_football_2,moderate,without_evidence,1,ok
+478cc2,1108,european_football_2,moderate,with_evidence,0,empty
