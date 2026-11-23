@@ -1,0 +1,3 @@
+Vendored unmodified from https://github.com/taoyds/test-suite-sql-eval
+commit: e97acc546ecbee8fa27fa8dbf025ef61493a876c
+files: exec_eval.py, parse.py (Apache-2.0, see LICENSE)

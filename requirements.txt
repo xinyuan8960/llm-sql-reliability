@@ -1,0 +1,4 @@
+anthropic==2.10.0
+python-dotenv==1.2.4
+sqlparse==0.6.1
+tqdm==4.70.1

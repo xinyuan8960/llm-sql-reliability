@@ -1,0 +1,15 @@
+# raw data and databases
+data/raw/
+*.sqlite
+*.zip
+
+# secrets
+.env
+
+# python
+__pycache__/
+*.pyc
+.venv/
+
+# os
+.DS_Store
