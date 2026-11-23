@@ -1,0 +1,4 @@
+Vendored unmodified from https://github.com/AlibabaResearch/DAMO-ConvAI (bird/llm/src/evaluation.py)
+commit: dec31ae335d7a5168ee17d5cc40c105e0da66d4e
+license: MIT, see LICENSE
+Comparison rule is identical to bird-bench/mini_dev evaluation/evaluation_ex.py (set(pred) == set(gold)).

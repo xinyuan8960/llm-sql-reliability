@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Blind Adjudication</title>
+<style>
+  :root {
+    --bg: #f6f6f4; --panel: #ffffff; --ink: #1d1d1b; --muted: #6b6b66; --line: #deded9;
+    --ev-bg: #fff7e0; --ev-line: #e6c35c; --ev-ink: #5c4300;
+    --kw: #7a3eb1; --fn: #0b6e99; --str: #a5521a; --num: #1f7a3a; --com: #8a8a85; --ident: #9a2f5a;
+    --err: #b3261e; --btn: #ffffff; --btn-on: #1d1d1b; --btn-on-ink: #ffffff; --accent: #2f5fd0;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #161615; --panel: #1f1f1e; --ink: #e9e9e4; --muted: #9a9a94; --line: #34342f;
+      --ev-bg: #2b2412; --ev-line: #8a6d1f; --ev-ink: #f0d88a;
+      --kw: #c49af0; --fn: #6cc3e8; --str: #e8a36b; --num: #7fd497; --com: #7c7c76; --ident: #ec8fb4;
+      --err: #ff8a80; --btn: #262624; --btn-on: #e9e9e4; --btn-on-ink: #161615; --accent: #8fb0ff;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body { background: var(--bg); color: var(--ink); font: 14px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+         display: grid; grid-template-rows: auto auto minmax(0, 1.4fr) minmax(0, 1fr) auto; gap: 10px; padding: 12px 16px; height: 100vh; }
+  header { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .progress { font-weight: 600; font-variant-numeric: tabular-nums; }
+  .tranche { padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel); }
+  .muted { color: var(--muted); }
+  .bar { flex: 1; min-width: 120px; height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; }
+  .bar > div { height: 100%; background: var(--accent); width: 0; }
+  .linkbtn { background: none; border: none; color: var(--accent); cursor: pointer; padding: 0; font: inherit; }
+  .top { display: grid; gap: 8px; }
+  .question { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; font-size: 16px; }
+  .evidence { background: var(--ev-bg); border: 1px solid var(--ev-line); border-left-width: 5px; border-radius: 8px; padding: 8px 12px; color: var(--ev-ink); }
+  .tag { display: block; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin-bottom: 2px; }
+  .evidence .tag { color: var(--ev-ink); opacity: .8; }
+  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; min-height: 0; }
+  .pane { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; display: flex; flex-direction: column; min-height: 0; }
+  .pane .tag { padding: 6px 10px 4px; margin: 0; border-bottom: 1px solid var(--line); }
+  .pane .body { overflow: auto; padding: 8px 10px; min-height: 0; flex: 1; }
+  pre.sql { margin: 0; font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre; }
+  .kw { color: var(--kw); font-weight: 600; } .fn { color: var(--fn); } .str { color: var(--str); }
+  .num { color: var(--num); } .com { color: var(--com); font-style: italic; } .ident { color: var(--ident); }
+  table { border-collapse: collapse; font: 13px ui-monospace, SFMono-Regular, Menlo, monospace; }
+  td { border: 1px solid var(--line); padding: 3px 8px; vertical-align: top; white-space: pre-wrap; }
+  td.null { color: var(--muted); font-style: italic; }
+  .note-rows { margin-top: 6px; color: var(--muted); font-size: 12px; }
+  .err { color: var(--err); font: 13px ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap; }
+  footer { display: grid; gap: 8px; }
+  .controls { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .controls button { background: var(--btn); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 7px 12px; font: inherit; cursor: pointer; }
+  .controls button:hover { border-color: var(--muted); }
+  .controls button.on { background: var(--btn-on); color: var(--btn-on-ink); border-color: var(--btn-on); }
+  .controls button:disabled { opacity: .5; cursor: default; }
+  kbd { font: 11px ui-monospace, Menlo, monospace; border: 1px solid var(--line); border-radius: 3px; padding: 0 4px; margin-right: 5px; color: var(--muted); }
+  .controls button.on kbd { color: inherit; border-color: currentColor; }
+  .noteline { display: flex; gap: 8px; align-items: center; }
+  .noteline input { flex: 1; background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 7px 10px; font: inherit; }
+  .status { font-size: 12px; }
+  .done { position: fixed; inset: 0; background: var(--bg); display: none; align-items: center; justify-content: center; flex-direction: column; gap: 12px; font-size: 16px; }
+  @media (max-width: 760px) { body { height: auto; min-height: 100vh; } .pair { grid-template-columns: 1fr; } .pane .body { max-height: 40vh; } }
+</style>
+</head>
+<body>
+<header>
+  <span class="progress" id="progress">loading…</span>
+  <span class="tranche" id="tranche"></span>
+  <div class="bar"><div id="bar"></div></div>
+  <span class="muted" id="overall"></span>
+  <button class="linkbtn" id="other">go to other tranche</button>
+</header>
+
+<section class="top">
+  <div class="question"><span class="tag">Question</span><span id="question"></span></div>
+  <div class="evidence"><span class="tag">Evidence</span><span id="evidence"></span></div>
+</section>
+
+<section class="pair">
+  <div class="pane"><span class="tag">Gold SQL</span><div class="body"><pre class="sql" id="gold_sql"></pre></div></div>
+  <div class="pane"><span class="tag">Generated SQL</span><div class="body"><pre class="sql" id="generated_sql"></pre></div></div>
+</section>
+
+<section class="pair">
+  <div class="pane"><span class="tag">Gold result</span><div class="body" id="gold_result"></div></div>
+  <div class="pane"><span class="tag">Generated result</span><div class="body" id="generated_result"></div></div>
+</section>
+
+<footer>
+  <div class="noteline">
+    <input id="note" type="text" placeholder="One line on why (press / to focus, Enter or Esc to leave)" autocomplete="off">
+  </div>
+  <div class="controls" id="buttons">
+    <button data-label="correct"><kbd>1</kbd>correct</button>
+    <button data-label="model_error"><kbd>2</kbd>model_error</button>
+    <button data-label="evidence_error"><kbd>3</kbd>evidence_error</button>
+    <button data-label="gold_error"><kbd>4</kbd>gold_error</button>
+    <button data-label="ambiguous"><kbd>5</kbd>ambiguous</button>
+    <button data-label="skip"><kbd>6</kbd>skip</button>
+    <span style="flex:1"></span>
+    <button id="back"><kbd>←</kbd>back</button>
+    <button id="next"><kbd>→</kbd>next (no label)</button>
+  </div>
+  <div class="status muted" id="status"></div>
+</footer>
+
+<div class="done" id="done">
+  <div id="doneMsg"></div>
+  <button class="linkbtn" id="restart">review from the start</button>
+</div>
+
+<script>
+const LABEL_KEYS = { "1": "correct", "2": "model_error", "3": "evidence_error", "4": "gold_error", "5": "ambiguous", "6": "skip" };
+let items = [], labels = {}, idx = 0, history = [], busy = false;
+
+// ---------- SQL tokenizer, formatter, highlighter ----------
+const KW = new Set(("SELECT FROM WHERE GROUP BY ORDER HAVING LIMIT OFFSET UNION ALL INTERSECT EXCEPT WITH AS ON JOIN INNER LEFT RIGHT " +
+  "FULL OUTER CROSS NATURAL AND OR NOT IN IS NULL LIKE BETWEEN EXISTS DISTINCT CASE WHEN THEN ELSE END ASC DESC USING RECURSIVE " +
+  "OVER PARTITION ROWS RANGE ESCAPE GLOB COLLATE NOCASE TRUE FALSE").split(" "));
+const FN = new Set(("COUNT SUM AVG MIN MAX CAST ROUND ABS LENGTH SUBSTR SUBSTRING STRFTIME DATE DATETIME JULIANDAY TIME IIF IFNULL " +
+  "COALESCE NULLIF UPPER LOWER TRIM LTRIM RTRIM REPLACE INSTR TOTAL GROUP_CONCAT RANK DENSE_RANK ROW_NUMBER LAG LEAD NTILE " +
+  "REAL INTEGER TEXT FLOAT NUMERIC").split(" "));
+const CLAUSE = new Set(["SELECT", "FROM", "WHERE", "GROUP", "ORDER", "HAVING", "LIMIT", "UNION", "INTERSECT", "EXCEPT", "WITH", "JOIN"]);
+const JOINMOD = new Set(["INNER", "LEFT", "RIGHT", "FULL", "CROSS", "NATURAL", "OUTER"]);
+const SPACE_BEFORE_PAREN = new Set([...KW].filter(k => !["EXISTS"].includes(k)));
+
+function tokenize(sql) {
+  const re = /(--[^\n]*)|('(?:[^']|'')*')|("(?:[^"]|"")*")|(`[^`]*`)|(\[[^\]]*\])|(\d+(?:\.\d+)?)|([A-Za-z_][A-Za-z0-9_]*)|(\s+)|(<=|>=|<>|!=|\|\||.)/g;
+  const types = ["com", "str", "ident", "ident", "ident", "num", "word", "ws", "punct"];
+  const out = []; let m;
+  while ((m = re.exec(sql)) !== null) {
+    const g = m.slice(1).findIndex(x => x !== undefined);
+    out.push({ type: types[g], v: m[0] });
+  }
+  return out;
+}
+
+function formatSQL(sql) {
+  const toks = tokenize(sql || "").filter(t => t.type !== "ws");
+  const stack = [];           // "sub" for subquery parens, "inline" for everything else
+  const caseStack = [];
+  const out = [];             // tokens and {nl: depth} markers
+  let clause = "", between = false, prev = null;
+  const depth = () => stack.filter(s => s === "sub").length + caseStack.length;
+  const inlineTop = () => stack.length > 0 && stack[stack.length - 1] === "inline";
+  const up = t => (t && t.type === "word") ? t.v.toUpperCase() : null;
+
+  for (let i = 0; i < toks.length; i++) {
+    const t = toks[i], U = up(t), NU = up(toks[i + 1]), P = up(prev);
+    if (U && !inlineTop()) {
+      if (CLAUSE.has(U) && !(U === "JOIN" && JOINMOD.has(P))) { out.push({ nl: depth() }); clause = U; }
+      else if (JOINMOD.has(U) && (NU === "JOIN" || NU === "OUTER") && !JOINMOD.has(P)) { out.push({ nl: depth() }); clause = "JOIN"; }
+      else if ((U === "AND" || U === "OR") && !(U === "AND" && between)) { out.push({ nl: depth() + 1 }); }
+      else if (U === "CASE") { caseStack.push(1); }
+      else if ((U === "WHEN" || U === "ELSE") && caseStack.length) { out.push({ nl: depth() }); }
+      else if (U === "END" && caseStack.length) { caseStack.pop(); out.push({ nl: depth() }); }
+    }
+    if (U === "AND" && between) between = false;
+    if (U === "BETWEEN") between = true;
+    if (t.v === "(") {
+      stack.push(NU === "SELECT" || NU === "WITH" ? "sub" : "inline");
+      out.push(t);
+    } else if (t.v === ")") {
+      const kind = stack.pop();
+      if (kind === "sub") out.push({ nl: depth() });
+      out.push(t);
+    } else {
+      out.push(t);
+    }
+    if (t.v === "," && !inlineTop() && !caseStack.length) {
+      if (clause === "SELECT") out.push({ nl: depth() + 1 });
+      else if (clause === "WITH") out.push({ nl: depth() });
+    }
+    prev = t;
+  }
+  return render(out);
+}
+
+function esc(s) { return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+
+function render(out) {
+  const lines = []; let cur = { depth: 0, toks: [] };
+  for (const x of out) {
+    if (x.nl !== undefined) { if (cur.toks.length) lines.push(cur); cur = { depth: x.nl, toks: [] }; }
+    else cur.toks.push(x);
+  }
+  if (cur.toks.length) lines.push(cur);
+  return lines.map(line => {
+    let s = "  ".repeat(line.depth), p = null;
+    for (const t of line.toks) {
+      if (p && needSpace(p, t)) s += " ";
+      s += highlight(t);
+      p = t;
+    }
+    return s;
+  }).join("\n");
+}
+
+function needSpace(p, t) {
+  if ([",", ")", ".", ";"].includes(t.v)) return false;
+  if (["(", "."].includes(p.v)) return false;
+  if (t.v === "(" && p.type === "word" && !SPACE_BEFORE_PAREN.has(p.v.toUpperCase())) return false;
+  return true;
+}
+
+function highlight(t) {
+  const v = esc(t.v);
+  if (t.type === "word") {
+    const U = t.v.toUpperCase();
+    if (KW.has(U)) return `<span class="kw">${v}</span>`;
+    if (FN.has(U)) return `<span class="fn">${v}</span>`;
+    return v;
+  }
+  if (["str", "num", "com", "ident"].includes(t.type)) return `<span class="${t.type}">${v}</span>`;
+  return v;
+}
+
+// ---------- results ----------
+function renderResult(s) {
+  // Results were stored as JSON of the first 20 rows, plus " ...(N rows)" when longer; errors are stored as plain text.
+  const m = (s || "").match(/^(\[[\s\S]*\])(?: \.\.\.\((\d+) rows\))?$/);
+  let rows = null;
+  if (m) { try { rows = JSON.parse(m[1]); } catch (e) { rows = null; } }
+  if (!rows) return `<div class="err">${esc(s || "(no result)")}</div>`;
+  const total = m[2] ? Number(m[2]) : rows.length;
+  if (total === 0) return `<div class="muted">0 rows (empty result)</div>`;
+  const shown = rows.slice(0, 10);
+  const body = shown.map(r => "<tr>" + r.map(v => v === null ? `<td class="null">NULL</td>` : `<td>${esc(String(v))}</td>`).join("") + "</tr>").join("");
+  const note = total > shown.length ? `showing first ${shown.length} of ${total} rows` : `${total} row${total === 1 ? "" : "s"}`;
+  return `<table>${body}</table><div class="note-rows">${note}</div>`;
+}
+
+// ---------- navigation ----------
+const resolved = it => labels[it.item_id] && labels[it.item_id].label !== "skip";
+const inTranche = tr => items.map((it, i) => i).filter(i => items[i].tranche === tr);
+
+function pickNext(from) {
+  // Unlabelled items in the current tranche first (forward, then wrapping), then skipped ones,
+  // then the other tranche. Tranche A always comes before B in the item order.
+  const order = from >= 0 && items[from].tranche === "B" ? ["B", "A"] : ["A", "B"];
+  for (const tr of order) {
+    const ids = inTranche(tr);
+    const rotated = ids.filter(i => i > from).concat(ids.filter(i => i <= from));
+    let j = rotated.find(i => !labels[items[i].item_id]);
+    if (j !== undefined) return j;
+    j = rotated.find(i => !resolved(items[i]) && i !== from);
+    if (j !== undefined) return j;
+  }
+  return -1;
+}
+
+function go(j, record = true) {
+  if (j < 0) return showDone();
+  if (record && j !== idx) history.push(idx);
+  idx = j;
+  document.getElementById("done").style.display = "none";
+  show();
+}
+
+function show() {
+  const it = items[idx];
+  const tr = inTranche(it.tranche);
+  document.getElementById("progress").textContent = `${tr.indexOf(idx) + 1} / ${tr.length}`;
+  document.getElementById("tranche").textContent = it.tranche === "A" ? "Tranche A · arms disagreed" : "Tranche B · both arms wrong";
+  document.getElementById("other").textContent = `go to tranche ${it.tranche === "A" ? "B" : "A"}`;
+  const done = items.filter(resolved).length;
+  document.getElementById("overall").textContent = `${done} / ${items.length} labelled`;
+  document.getElementById("bar").style.width = `${100 * done / items.length}%`;
+  document.getElementById("question").textContent = it.question;
+  document.getElementById("evidence").textContent = it.evidence || "(none)";
+  document.getElementById("gold_sql").innerHTML = formatSQL(it.gold_sql);
+  document.getElementById("generated_sql").innerHTML = formatSQL(it.generated_sql);
+  document.getElementById("gold_result").innerHTML = renderResult(it.gold_result);
+  document.getElementById("generated_result").innerHTML = renderResult(it.generated_result);
+  document.querySelectorAll(".pane .body").forEach(b => { b.scrollTop = 0; b.scrollLeft = 0; });
+  const saved = labels[it.item_id];
+  document.getElementById("note").value = saved ? saved.note : "";
+  document.querySelectorAll("#buttons [data-label]").forEach(b => b.classList.toggle("on", !!saved && b.dataset.label === saved.label));
+  document.getElementById("status").textContent = saved ? `saved: ${saved.label} at ${saved.timestamp} · item ${it.item_id}` : `item ${it.item_id}`;
+  document.getElementById("back").disabled = history.length === 0;
+}
+
+function showDone() {
+  const skipped = items.filter(it => labels[it.item_id] && labels[it.item_id].label === "skip").length;
+  document.getElementById("doneMsg").textContent = `All ${items.length} items labelled.` + (skipped ? ` (${skipped} skipped)` : "");
+  document.getElementById("done").style.display = "flex";
+}
+
+async function submit(label) {
+  if (busy) return;
+  busy = true;
+  const it = items[idx], note = document.getElementById("note").value;
+  try {
+    const r = await fetch("/api/label", { method: "POST", headers: { "Content-Type": "application/json" },
+                                           body: JSON.stringify({ item_id: it.item_id, label, note }) });
+    if (!r.ok) throw new Error(await r.text());
+    labels[it.item_id] = await r.json();
+    go(pickNext(idx));
+  } catch (e) {
+    document.getElementById("status").textContent = `NOT SAVED: ${e.message}. Is the server still running?`;
+  } finally {
+    busy = false;
+  }
+}
+
+function back() { if (history.length) go(history.pop(), false); }
+function nextNoLabel() { if (idx + 1 < items.length) go(idx + 1); }
+function otherTranche() {
+  const target = items[idx].tranche === "A" ? "B" : "A";
+  const ids = inTranche(target);
+  go(ids.find(i => !resolved(items[i])) ?? ids[0]);
+}
+
+document.getElementById("buttons").addEventListener("click", e => {
+  const b = e.target.closest("[data-label]");
+  if (b) submit(b.dataset.label);
+});
+document.getElementById("back").onclick = back;
+document.getElementById("next").onclick = nextNoLabel;
+document.getElementById("other").onclick = otherTranche;
+document.getElementById("restart").onclick = () => go(0);
+
+document.addEventListener("keydown", e => {
+  const note = document.getElementById("note");
+  if (document.activeElement === note) {
+    if (e.key === "Enter" || e.key === "Escape") { e.preventDefault(); note.blur(); }
+    return;
+  }
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  if (LABEL_KEYS[e.key]) { e.preventDefault(); submit(LABEL_KEYS[e.key]); }
+  else if (e.key === "ArrowLeft") { e.preventDefault(); back(); }
+  else if (e.key === "ArrowRight") { e.preventDefault(); nextNoLabel(); }
+  else if (e.key === "/") { e.preventDefault(); note.focus(); }
+});
+
+fetch("/api/items").then(r => r.json()).then(d => {
+  items = d.items; labels = d.labels;
+  const start = pickNext(-1);  // resume at the first unlabelled item (tranche A first), then skipped ones
+  if (start < 0) { idx = 0; showDone(); } else { idx = start; show(); }
+}).catch(e => { document.getElementById("progress").textContent = "Could not load items: " + e.message; });
+</script>
+</body>
+</html>
